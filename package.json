@@ -1,0 +1,55 @@
+{
+  "name": "dsh-mailbox",
+  "version": "0.1.0",
+  "description": "离线邮件档案工作台 DSH 插件：直接读已导出的 .eml / .mbox，不联网、不需要 OAuth。做清点、四栏分诊、线程归并、附件盘点与去重；每条结论都能回指到具体文件。 | Offline mailbox archive workbench for DeepSeek Harness: reads exported .eml/.mbox without network or OAuth — inventory, triage, threading, attachment audit and dedupe, every finding traceable to a file.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "email",
+    "eml",
+    "mbox",
+    "mailbox",
+    "archive",
+    "triage",
+    "offline",
+    "邮件",
+    "邮件归档"
+  ],
+  "license": "MIT",
+  "author": "he fangsheng (https://github.com/dongsheng123132)",
+  "type": "module",
+  "main": "./plugin.mjs",
+  "bin": {
+    "dsh-mailbox": "./lib/cli.mjs"
+  },
+  "exports": {
+    ".": "./plugin.mjs",
+    "./cli": "./lib/cli.mjs",
+    "./lib/*": "./lib/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "plugin.mjs",
+    "lib/",
+    "cordis.patch.yml",
+    "dsh-plugin.naming.json",
+    "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.2-rc.3 <0.3.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check plugin.mjs && node scripts/check.mjs"
+  }
+}

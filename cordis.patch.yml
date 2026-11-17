@@ -1,0 +1,12 @@
+# dsh-mailbox：往宿主挂 host 侧插件，注册模型可调用工具 dsh_mailbox。
+# 行 id 与包名同名（三个名字同源），避免「行 id ≠ 包名」造成重复注册。
+- insert:
+    - id: dsh-mailbox
+      name: dsh-mailbox
+      config:
+        # 默认档案目录；留空 = 调用时给 root
+        root: ''
+        # 默认最多返回多少条
+        topN: 20
+        # 是否允许把 home 当 root（默认拒绝，防误扫整台机器）
+        allowHome: false

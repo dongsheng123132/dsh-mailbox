@@ -1,0 +1,19 @@
+From: =?UTF-8?B?5byg5LiJ?= <zhangsan@example.com>
+To: me@example.com
+Subject: =?UTF-8?B?6aG555uu56Gu6K6k?=
+Date: Tue, 18 Nov 2026 10:30:00 +0800
+Message-ID: <multi-1@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="BOUND1"
+
+--BOUND1
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: base64
+
+5L2g5aW977yMCgrov5nmmK/kuK3mlofmraPmlofjgILor7fnoa7orqTmlLbliLDjgIIK
+--BOUND1
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGJvZHk+PHA+5L2g5aW977yMPC9wPjxwPui/meaYr+S4reaWh+ato+aWh+OAguivt+ehruiupOaUtuWIsOOAgjwvcD48L2JvZHk+PC9odG1sPg==
+--BOUND1--
