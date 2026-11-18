@@ -70,7 +70,9 @@ These are design boundaries, not missing features:
 - **No execution of mail content**: HTML scripts are stripped, remote images are not fetched.
 - **Unsupported formats** are reported honestly, not faked: TNEF (`winmail.dat`), S/MIME decryption, encrypted mail, MS proprietary rich text.
 - **No semantic inference**: the four buckets are keyword rules, not a model. Every result lists the matched keywords for human review; uncertain items go to "notify" instead of polluting "action".
-- **No guaranteed deadlines**: only explicit date formats are parsed (`2026-11-25`, `11月20日`, `Nov 24, 2026`); "ASAP" or "next week" are not guessed.
+- **Only the words this message actually writes**: quoted history (`>` lines, `-----Original Message-----`, `On … wrote:`, Outlook `From:` header blocks) is ignored when applying rules — otherwise an old deadline or old error quoted inside a reply would push an already-settled thread back into "action" or "red". The subject line always counts.
+- **No guaranteed deadlines**: only explicit date formats are parsed (`2026-11-25`, `2026/11/25`, `2026.11.25`, `2026年11月25日`, `11月20日`, `Nov 24, 2026`, `within 5 days`, `7天内`); "ASAP" or "next week" are not turned into dates, though "请于下周三前回复" still lands in "action" as an explicit ask.
+- **Years never come from the clock**: a date without a year is resolved against the message's own send date (a "Jan 5" written in December rolls to the next year), so triaging a 2024 archive does not produce 2026 deadlines.
 - **No huge-archive indexing**: files over 200 MB are skipped and reported; no persistent index is built.
 
 ## Charset support
