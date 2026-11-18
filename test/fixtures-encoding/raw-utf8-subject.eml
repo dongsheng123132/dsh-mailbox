@@ -1,0 +1,9 @@
+From: vendor@example.cn
+To: me@example.com
+Subject: 报价单确认
+Date: Wed, 19 Nov 2025 14:00:00 +0800
+Message-ID: <raw-utf8-subject-eml@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+请于11月20日前确认报价。

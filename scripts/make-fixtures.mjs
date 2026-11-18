@@ -162,3 +162,95 @@ writeFileSync(join(dir, 'dup-basic.eml'), joinLines([
 ]))
 
 console.log('fixtures written to', dir)
+
+// ── 8) 真实世界的乱码样本：test/fixtures-encoding/ ──────────────
+// 这些文件必须按**字节**写：写成 JS 字符串就测不出「按字节猜字符集」这件事了。
+// GBK 字节由 printf '…' | iconv -f UTF-8 -t GBK | xxd -p 预生成：
+//   '报价单确认'              = b1a8bcdbb5a5c8b7c8cf
+//   '请在11月20日前确认报价。' = c7ebd4da3131d4c23230c8d5c7b0c8b7c8cfb1a8bcdba1a3
+//   '附件：合同扫描件.pdf'     = b8bdbcfebacfcdefb8bdc9a8c3e8c9a8c8bdb0e5
+const encDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'test', 'fixtures-encoding')
+mkdirSync(encDir, { recursive: true })
+
+const utf8 = (s) => Buffer.from(s, 'utf8')
+const gbk = (hex) => Buffer.from(hex.replace(/\s+/g, ''), 'hex')
+const crlf = (s) => Buffer.from(s + CRLF, 'latin1')
+const raw = (s) => Buffer.from(s, 'latin1')
+
+const GBK_SUBJECT = 'b1a8bcdbb5a5c8b7c8cf'                       // 报价单确认
+const GBK_QUOTE_BODY = 'c7ebd4da3131d4c23230c8d5c7b0c8b7c8cfb1a8bcdba1a3' // 请在11月20日前确认报价。
+const GBK_PDF_NAME = 'b8bdbcfebacfcdefb8bdc9a8c3e8c9a8c8bdb0e5'  // 附件：合同扫描件.pdf
+
+/** 按字节拼一封邮件：主题 / 正文可以是任意字符集，Content-Type 由调用方声明。 */
+function writeBytes(file, { subjectBytes, contentType, bodyBytes, afterBody = [] }) {
+  const parts = [
+    crlf('From: vendor@example.cn'),
+    crlf('To: me@example.com'),
+    raw('Subject: '), subjectBytes, crlf(''),
+    crlf(`Date: Wed, 19 Nov 2025 14:00:00 +0800`),
+    crlf(`Message-ID: <${file.replace(/[^a-z0-9]+/gi, '-')}@example.com>`),
+    crlf('MIME-Version: 1.0'),
+    crlf(`Content-Type: ${contentType}`),
+    crlf(''),
+    bodyBytes,
+    ...afterBody,
+  ]
+  writeFileSync(join(encDir, file), Buffer.concat(parts))
+}
+
+// 8a) 主题是原始 UTF-8 字节（没做 RFC 2047 编码）——中文客户端常见
+writeBytes('raw-utf8-subject.eml', {
+  subjectBytes: utf8('报价单确认'),
+  contentType: 'text/plain; charset=utf-8',
+  bodyBytes: utf8('请于11月20日前确认报价。\r\n'),
+})
+
+// 8b) 主题是原始 GBK 字节（老中文客户端的 8bit 头）
+writeBytes('raw-gbk-subject.eml', {
+  subjectBytes: gbk(GBK_SUBJECT),
+  contentType: 'text/plain; charset=utf-8',
+  bodyBytes: utf8('please confirm\r\n'),
+})
+
+// 8c) 声明 utf-8、正文其实是 GBK（导出工具写错 charset 的典型）
+writeBytes('declared-utf8-but-gbk.eml', {
+  subjectBytes: utf8('quote'),
+  contentType: 'text/plain; charset=utf-8',
+  bodyBytes: Buffer.concat([gbk(GBK_QUOTE_BODY), crlf('')]),
+})
+
+// 8d) 声明 gbk、正文其实是 UTF-8
+writeBytes('declared-gbk-but-utf8.eml', {
+  subjectBytes: utf8('quote'),
+  contentType: 'text/plain; charset=gbk',
+  bodyBytes: utf8('请在11月20日前确认报价。\r\n'),
+})
+
+// 8e) 完全没写 charset，正文是 GBK
+writeBytes('no-charset-gbk-body.eml', {
+  subjectBytes: utf8('quote'),
+  contentType: 'text/plain',
+  bodyBytes: Buffer.concat([gbk(GBK_QUOTE_BODY), crlf('')]),
+})
+
+// 8f) 附件文件名是原始 UTF-8 字节（不是 RFC 2047/2231）
+writeBytes('raw-utf8-filename.eml', {
+  subjectBytes: utf8('附件测试'),
+  contentType: 'multipart/mixed; boundary="ENC1"',
+  bodyBytes: Buffer.concat([
+    crlf('--ENC1'),
+    crlf('Content-Type: text/plain; charset=utf-8'),
+    crlf(''),
+    crlf('see attached'),
+    crlf('--ENC1'),
+    crlf('Content-Type: application/pdf'),
+    Buffer.from('Content-Disposition: attachment; filename="', 'latin1'), utf8('附件：合同扫描件.pdf'), crlf('"'),
+    crlf('Content-Transfer-Encoding: base64'),
+    crlf(''),
+    crlf(Buffer.from('%PDF-1.4 fake').toString('base64')),
+    crlf('--ENC1--'),
+    crlf(''),
+  ]),
+})
+
+console.log('encoding fixtures written to', encDir)

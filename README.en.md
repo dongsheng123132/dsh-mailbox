@@ -79,7 +79,12 @@ These are design boundaries, not missing features:
 
 UTF-8 · GBK/GB2312/GB18030 · Big5 · ISO-8859-1 · Windows-1252 · Shift_JIS · EUC-JP · EUC-KR
 
-Undecodable charsets are surfaced as encoding warnings rather than silently producing mangled text.
+Two real-world breakages are detected instead of being passed through as mojibake:
+
+- **Raw 8-bit header bytes** (UTF-8 or GBK written into `Subject` / `From` / attachment filename without RFC 2047 encoding) — UTF-8 is tried first because it is self-validating, then GBK; anything undecodable is kept verbatim rather than invented.
+- **Wrong declared charset** (claims `utf-8` but the bytes are GBK, or the reverse). GBK can "decode" almost any byte stream, so validity alone is not enough: a stream that is valid multi-byte UTF-8 wins over a non-UTF-8 declaration, and replacement characters trigger a GBK/Big5/Shift_JIS retry. A couple of corrupt bytes do not flip the whole body.
+
+Undecodable charsets are surfaced as encoding warnings rather than silently producing mangled text; each warning names both what was claimed and what was actually used.
 
 ## Exit codes
 

@@ -1,0 +1,20 @@
+From: vendor@example.cn
+To: me@example.com
+Subject: 附件测试
+Date: Wed, 19 Nov 2025 14:00:00 +0800
+Message-ID: <raw-utf8-filename-eml@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="ENC1"
+
+--ENC1
+Content-Type: text/plain; charset=utf-8
+
+see attached
+--ENC1
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="附件：合同扫描件.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQgZmFrZQ==
+--ENC1--
+
