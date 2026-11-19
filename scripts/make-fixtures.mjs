@@ -254,3 +254,53 @@ writeBytes('raw-utf8-filename.eml', {
 })
 
 console.log('encoding fixtures written to', encDir)
+
+// ── 9) 线程兜底样本：test/fixtures-subject/ ────────────────────
+// 真导出里常见「没有 References / In-Reply-To，只有 Re: / 答复: 前缀」的对话。
+// 这里放一串该合并的、一个不同客户的（不该合并）、一封跨窗口的（默认不该合并）。
+const subjDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'test', 'fixtures-subject')
+mkdirSync(subjDir, { recursive: true })
+
+const subjEml = (file, { from, to, subject, date, body }) => writeFileSync(join(subjDir, file), joinLines([
+  `From: ${from}`,
+  `To: ${to}`,
+  `Subject: ${subject}`,
+  `Date: ${date}`,
+  `Message-ID: <${file.replace(/[^a-z0-9]+/gi, '-')}@example.com>`,
+  'Content-Type: text/plain; charset=utf-8',
+  '',
+  body,
+]))
+
+subjEml('a-vendor.eml', {
+  from: 'vendor@example.cn', to: 'me@example.com',
+  subject: '报价单确认', date: 'Mon, 02 Nov 2026 09:00:00 +0800',
+  body: '请确认报价。',
+})
+subjEml('b-me.eml', {
+  from: 'me@example.com', to: 'vendor@example.cn',
+  subject: 'Re: 报价单确认', date: 'Tue, 03 Nov 2026 10:00:00 +0800',
+  body: '收到，我看看。',
+})
+subjEml('c-vendor-reply.eml', {
+  from: 'vendor@example.cn', to: 'me@example.com',
+  subject: '答复: 报价单确认', date: 'Thu, 05 Nov 2026 11:00:00 +0800',
+  body: '再确认一下。',
+})
+subjEml('d-other-customer.eml', {
+  from: 'other@another.example', to: 'me@example.com',
+  subject: '答复: 报价单确认', date: 'Wed, 04 Nov 2026 15:00:00 +0800',
+  body: '这是另一个客户的同名报价单。',
+})
+subjEml('e-late.eml', {
+  from: 'vendor@example.cn', to: 'me@example.com',
+  subject: 'Re: 报价单确认', date: 'Mon, 01 Mar 2027 09:00:00 +0800',
+  body: '隔了四个月再问一次。',
+})
+subjEml('f-fwd.eml', {
+  from: 'me@example.com', to: 'vendor@example.cn',
+  subject: 'Fwd: [外部] Re: 报价单确认', date: 'Fri, 06 Nov 2026 09:30:00 +0800',
+  body: '转给同事看看。',
+})
+
+console.log('subject fixtures written to', subjDir)

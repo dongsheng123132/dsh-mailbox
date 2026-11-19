@@ -11,6 +11,7 @@ import * as plugin from '../plugin.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const fixtures = join(here, 'fixtures')
+const subjFixtures = join(here, 'fixtures-subject')
 
 /** 最小假 ctx：记录注册的 tool。 */
 function makeCtx() {
@@ -70,6 +71,17 @@ test('execute threads：返回线程数', async () => {
   const out = await def.execute({ action: 'threads', root: fixtures, top: 3 }, {})
   assert.ok(Array.isArray(out.threads))
   assert.ok(out.threads.length <= 3)
+})
+
+test('execute threads：主题兜底可开关，兜底后线程变少', async () => {
+  const ctx = makeCtx()
+  plugin.apply(ctx, {})
+  const def = ctx.registered[0]
+  const on = await def.execute({ action: 'threads', root: subjFixtures, top: 10 }, {})
+  assert.match(on.summary, /兜底归并/)
+  const off = await def.execute({ action: 'threads', root: subjFixtures, top: 10, windowDays: 0 }, {})
+  assert.match(off.summary, /已关闭主题兜底/)
+  assert.ok(off.threads.length > on.threads.length, '关掉兜底应该拆成更多线程')
 })
 
 test('execute attachments：识别 pdf', async () => {

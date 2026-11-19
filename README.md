@@ -40,7 +40,7 @@ npx dsh-mailbox scan ./mail-export
 |---|---|
 | `scan` | 清点：文件数、邮件数、去重、日期范围、附件数 |
 | `triage` | 四栏分诊：**要动的** / 坏的 / 好的 / 机会 |
-| `threads` | 按引用关系归并线程，找出最长的对话 |
+| `threads` | 归并线程：有引用头按 References/In-Reply-To，没有就按主题+时间窗兜底 |
 | `attachments` | 附件盘点：类型、大小、出现次数 |
 | `search` | 在主题/正文/发件人里搜 |
 
@@ -49,7 +49,9 @@ dsh-mailbox scan        ./mail-export
 dsh-mailbox triage      ./mail-export            # 完整 Markdown 报告
 dsh-mailbox triage      ./mail-export --brief    # 一屏摘要
 dsh-mailbox triage      ./mail-export --json     # 机读
-dsh-mailbox threads     ./mail-export --top 10
+dsh-mailbox threads     ./mail-export --top 10            # 30 天窗兜底
+dsh-mailbox threads     ./mail-export --window 0          # 只认引用头
+dsh-mailbox threads     ./mail-export --window 90 --top 5  # 放宽时间窗
 dsh-mailbox attachments ./mail-export
 dsh-mailbox search      ./mail-export --q "invoice"
 ```
@@ -70,6 +72,20 @@ dsh-mailbox search      ./mail-export --q "invoice"
 ```
 
 每条结论都带**文件路径 + 序号**，用户质疑时能当场翻开原文。
+
+### 线程是怎么归并的（以及为什么不会乱粘）
+
+真导出里大量回复没有 `References` / `In-Reply-To`（有的工具直接丢掉），只剩 `Re:` / `答复:` 前缀。只认引用头的话，一段对话会被读成好几件互不相干的事。
+
+所以 `threads` 分两轮：
+
+1. **有引用头就用引用头**：沿着 `In-Reply-To` / `References` 找根，这一轮永远优先。
+2. **没有引用头才兜底**：归一化主题（剥 `Re:` / `Fwd:` / `答复:` / `回复:` / `转:` / `[外部]`，压空白、忽略大小写）后，要求同时满足三条才合并——
+   - 主题相同；
+   - 除邮箱主人外**至少有一个共同联系人**（两个客户发的同名「报价单」不会被粘成一条）；
+   - 与线程起点相差不超过 `--window` 天（默认 30）。
+
+输出会把靠兜底合并的线程标成 `·主题兜底`，你能一眼看出哪些结论是猜的、哪些是引用头证实的。默认只认 30 天；`--window 0` 完全关掉兜底。
 
 ## 明确不做什么
 
@@ -123,7 +139,7 @@ dsh-mailbox search      ./mail-export --q "invoice"
 ## 开发
 
 ```bash
-npm test          # 83 条测试
+npm test          # 94 条测试
 npm run check     # 五道门禁：结构/语法/命名/加载/红线
 node scripts/make-fixtures.mjs   # 重新生成测试样本（GBK/base64/QP/附件/mbox）
 ```

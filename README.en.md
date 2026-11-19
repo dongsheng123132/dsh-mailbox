@@ -40,7 +40,7 @@ Five actions, none of which modify your files:
 |---|---|
 | `scan` | Inventory: files, messages, duplicates, date range, attachments |
 | `triage` | Four buckets: **action** / red / good / opportunity |
-| `threads` | Group by References / In-Reply-To, longest conversations first |
+| `threads` | Thread grouping: References/In-Reply-To first, then a subject + time-window fallback |
 | `attachments` | Attachment audit: type, size, occurrences |
 | `search` | Search subject / body / sender |
 
@@ -49,7 +49,8 @@ dsh-mailbox scan        ./mail-export
 dsh-mailbox triage      ./mail-export            # full Markdown report
 dsh-mailbox triage      ./mail-export --brief    # one-screen summary
 dsh-mailbox triage      ./mail-export --json     # machine readable
-dsh-mailbox threads     ./mail-export --top 10
+dsh-mailbox threads     ./mail-export --top 10            # 30-day fallback window
+dsh-mailbox threads     ./mail-export --window 0          # headers only
 dsh-mailbox attachments ./mail-export
 dsh-mailbox search      ./mail-export --q "invoice"
 ```
@@ -59,6 +60,15 @@ Inside DSH, just ask:
 > Use dsh_mailbox to triage `~/Downloads/mail-export` and only list what I need to act on this week.
 
 Every finding carries a **file path + index**, so any claim can be traced back to the original message.
+
+### How threads are grouped (and why they are not over-merged)
+
+Many real exports lose `References` / `In-Reply-To` and keep only a `Re:` / `答复:` prefix. `threads` runs two passes:
+
+1. **Headers first**: follow `In-Reply-To` / `References` to the root. This pass always wins.
+2. **Fallback only when there are no headers**: normalized subject (strips `Re:` / `Fwd:` / `答复:` / `回复:` / `转:` / `[外部]`, collapses whitespace, case-insensitive) **and** a shared counterparty other than the mailbox owner **and** a start-date gap within `--window` days (default 30).
+
+Threads merged by the fallback are tagged `·主题兜底`, so it is visible which groupings rest on headers and which are inferred. `--window 0` disables the fallback entirely.
 
 ## What it does not do
 

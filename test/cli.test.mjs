@@ -12,6 +12,7 @@ import { statSync } from 'node:fs'
 const here = dirname(fileURLToPath(import.meta.url))
 const cli = join(here, '..', 'lib', 'cli.mjs')
 const fixtures = join(here, 'fixtures')
+const subjFixtures = join(here, 'fixtures-subject')
 
 function run(args) {
   const r = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' })
@@ -58,6 +59,31 @@ test('cli threads：归并出 Q4 线程', () => {
   const r = run(['threads', fixtures])
   assert.equal(r.status, 0)
   assert.match(r.stdout, /Q4 planning/)
+})
+
+test('cli threads：没有引用头的对话按主题+时间窗兜底归并', () => {
+  const r = run(['threads', subjFixtures])
+  assert.equal(r.status, 0)
+  assert.match(r.stdout, /最长 4 封/)
+  assert.match(r.stdout, /·主题兜底/)
+})
+
+test('cli threads --window 0：关闭主题兜底，一封一线程', () => {
+  const r = run(['threads', subjFixtures, '--window', '0'])
+  assert.equal(r.status, 0)
+  assert.match(r.stdout, /已关闭主题兜底/)
+  assert.match(r.stdout, /共 6 个线程/)
+})
+
+test('cli threads --window 200：放宽窗口后跨月回复也合并', () => {
+  const r = run(['threads', subjFixtures, '--window', '200'])
+  assert.equal(r.status, 0)
+  assert.match(r.stdout, /最长 5 封/)
+})
+
+test('cli threads：--window 非法退出 1', () => {
+  const r = run(['threads', subjFixtures, '--window', '-3'])
+  assert.equal(r.status, 1)
 })
 
 test('cli attachments：列出 contract.pdf', () => {

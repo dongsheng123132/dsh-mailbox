@@ -39,6 +39,7 @@ const PARAMETERS = {
     query: { type: 'string', description: 'search 的关键词。' },
     top: { type: 'integer', description: '最多返回多少条，默认 20。' },
     brief: { type: 'boolean', description: 'triage 只返回精简摘要（默认 false = 完整 Markdown）。' },
+    windowDays: { type: 'integer', description: 'threads 的主题兜底时间窗（天），默认 30；0 = 关闭兜底，只看 References / In-Reply-To。' },
     allow_home: { type: 'boolean', description: '允许把 home 当 root（默认拒绝，防误扫整台机器）。' },
   },
   required: ['action'],
@@ -161,15 +162,22 @@ export function createToolDefinition(config = {}) {
       }
 
       if (args.action === 'threads') {
-        const threads = groupThreads(archive.messages)
+        const windowDays = args.windowDays === undefined ? 30 : Number(args.windowDays)
+        if (!Number.isFinite(windowDays) || windowDays < 0) throw new Error('windowDays 需要 ≥ 0 的天数')
+        const threads = groupThreads(archive.messages, { windowDays })
+        const merged = threads.filter(t => t.subjectMerged).length
+        const longest = threads.reduce((n, t) => Math.max(n, t.count), 0)
         base.threads = threads.slice(0, top).map(t => ({
           key: t.key,
           count: t.count,
           subject: t.messages[0]?.subject,
           from: t.messages[0]?.from,
           lastDate: t.lastDate,
+          via: t.via,
+          subjectMerged: t.subjectMerged,
         }))
-        base.summary = `共 ${threads.length} 个线程，最长 ${threads[0]?.count || 0} 封`
+        base.summary = `共 ${threads.length} 个线程，最长 ${longest} 封` +
+          (windowDays > 0 ? `（其中 ${merged} 个靠主题+${windowDays}天窗兜底归并）` : '（已关闭主题兜底）')
         return base
       }
 
