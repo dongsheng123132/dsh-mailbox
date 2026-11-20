@@ -9,6 +9,7 @@
 
 import { loadArchive, groupThreads } from './lib/archive.mjs'
 import { triageAll, bucketLabel } from './lib/triage.mjs'
+import { buildExport } from './lib/export.mjs'
 import { renderMarkdown, renderBrief } from './lib/report.mjs'
 
 /** cordis 插件名（= 包名）。 */
@@ -32,14 +33,15 @@ const PARAMETERS = {
   properties: {
     action: {
       type: 'string',
-      enum: ['scan', 'triage', 'threads', 'attachments', 'search'],
-      description: 'scan = 清点档案；triage = 四栏分诊；threads = 线程归并；attachments = 附件盘点；search = 搜索。',
+      enum: ['scan', 'triage', 'threads', 'attachments', 'search', 'export'],
+      description: 'scan = 清点档案；triage = 四栏分诊；threads = 线程归并；attachments = 附件盘点；search = 搜索；export = 导出 CSV 待办表（只返回文本，不写文件）。',
     },
     root: { type: 'string', description: '档案目录（含 .eml / .mbox）。拒绝 / 与 home（除非 allow_home:true）。' },
     query: { type: 'string', description: 'search 的关键词。' },
     top: { type: 'integer', description: '最多返回多少条，默认 20。' },
     brief: { type: 'boolean', description: 'triage 只返回精简摘要（默认 false = 完整 Markdown）。' },
     windowDays: { type: 'integer', description: 'threads 的主题兜底时间窗（天），默认 30；0 = 关闭兜底，只看 References / In-Reply-To。' },
+    bucket: { type: 'string', description: 'export 导哪一栏：action（默认）/ red / opportunity / good / notify / all。' },
     allow_home: { type: 'boolean', description: '允许把 home 当 root（默认拒绝，防误扫整台机器）。' },
   },
   required: ['action'],
@@ -60,6 +62,7 @@ const OUTPUT_SCHEMA = {
     threads: {},
     attachments: {},
     hits: {},
+    csv: { type: 'string' },
     markdown: { type: 'string' },
     summary: { type: 'string' },
     notes: { type: 'array', items: { type: 'string' } },
@@ -178,6 +181,17 @@ export function createToolDefinition(config = {}) {
         }))
         base.summary = `共 ${threads.length} 个线程，最长 ${longest} 封` +
           (windowDays > 0 ? `（其中 ${merged} 个靠主题+${windowDays}天窗兜底归并）` : '（已关闭主题兜底）')
+        return base
+      }
+
+      if (args.action === 'export') {
+        const bucket = args.bucket || 'action'
+        const known = ['action', 'red', 'opportunity', 'good', 'notify', 'all']
+        if (!known.includes(bucket)) throw new Error(`bucket 只能是 ${known.join(' / ')}`)
+        const result = triageAll(archive.messages, now)
+        // 只返回文本：本包不写文件，落盘由用户重定向或由宿主保存
+        base.csv = buildExport(result.groups, { root, now, bucket }).csv
+        base.summary = `导出 ${bucket === 'all' ? '全部栏' : bucketLabel(bucket)} 的 CSV 待办表（${base.csv.split('\r\n').length - 2} 行）`
         return base
       }
 

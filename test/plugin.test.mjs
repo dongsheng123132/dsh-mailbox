@@ -84,6 +84,31 @@ test('execute threads：主题兜底可开关，兜底后线程变少', async ()
   assert.ok(off.threads.length > on.threads.length, '关掉兜底应该拆成更多线程')
 })
 
+test('execute export：返回 CSV 文本（不写文件），默认只导「要动的」', async () => {
+  const ctx = makeCtx()
+  plugin.apply(ctx, {})
+  const def = ctx.registered[0]
+  const out = await def.execute({ action: 'export', root: fixtures }, {})
+  assert.equal(typeof out.csv, 'string')
+  assert.ok(out.csv.startsWith('\uFEFF'), '默认带 BOM 给中文 Excel')
+  assert.match(out.csv, /截止日/)
+  assert.match(out.csv, /报价单截止/)
+  assert.match(out.summary, /导出/)
+})
+
+test('execute export：--all 导出每一栏，bucket 非法要报错', async () => {
+  const ctx = makeCtx()
+  plugin.apply(ctx, {})
+  const def = ctx.registered[0]
+  const all = await def.execute({ action: 'export', root: fixtures, bucket: 'all' }, {})
+  const lines = all.csv.split('\r\n').filter(Boolean)
+  assert.equal(lines.length, 9, '表头 + 8 封')
+  await assert.rejects(
+    () => def.execute({ action: 'export', root: fixtures, bucket: 'nope' }, {}),
+    /bucket/,
+  )
+})
+
 test('execute attachments：识别 pdf', async () => {
   const ctx = makeCtx()
   plugin.apply(ctx, {})

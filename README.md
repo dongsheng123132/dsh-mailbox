@@ -43,6 +43,7 @@ npx dsh-mailbox scan ./mail-export
 | `threads` | 归并线程：有引用头按 References/In-Reply-To，没有就按主题+时间窗兜底 |
 | `attachments` | 附件盘点：类型、大小、出现次数 |
 | `search` | 在主题/正文/发件人里搜 |
+| `export` | 把分诊结果导成 CSV 待办表（Excel / Numbers / 飞书表格直接打开） |
 
 ```bash
 dsh-mailbox scan        ./mail-export
@@ -54,6 +55,10 @@ dsh-mailbox threads     ./mail-export --window 0          # 只认引用头
 dsh-mailbox threads     ./mail-export --window 90 --top 5  # 放宽时间窗
 dsh-mailbox attachments ./mail-export
 dsh-mailbox search      ./mail-export --q "invoice"
+dsh-mailbox export      ./mail-export > 待办.csv       # 默认只导「要动的」，带 BOM
+dsh-mailbox export      ./mail-export --all            # 每一栏都导（多一列「栏」）
+dsh-mailbox export      ./mail-export --bucket red     # 只导某一栏
+dsh-mailbox export      ./mail-export --no-bom         # 不带 BOM（喂脚本/API）
 ```
 
 在 DSH 里对 AI 说：
@@ -87,12 +92,30 @@ dsh-mailbox search      ./mail-export --q "invoice"
 
 输出会把靠兜底合并的线程标成 `·主题兜底`，你能一眼看出哪些结论是猜的、哪些是引用头证实的。默认只认 30 天；`--window 0` 完全关掉兜底。
 
+### 把待办落成表格（export）
+
+`export` 输出的是 **CSV 文本**，不是文件——本包不写盘，落盘由你决定：
+
+```bash
+dsh-mailbox export ./mail-export > 待办.csv
+```
+
+列固定为：`截止日 / 剩余天数 / 栏 / 主题 / 发件人 / 邮件日期 / 原文写法 / 来源 / 命中关键词 / 要不要回复`。
+
+- **默认只导「要动的」**；`--all` 导每一栏（用「栏」列区分）；`--bucket red` 只导某一栏。
+- **默认带 UTF-8 BOM**：不带的话中文 Excel 打开是乱码。给脚本吃用 `--no-bom`。
+- 「来源」是相对档案目录的路径 + `#序号`（如 `gbk.eml#0`），在表格里也能翻回原文。
+- 「原文写法」保留邮件里怎么写的（`11月20日`），和归一化后的「截止日」对照着看。
+- **防公式注入**：主题来自外部输入，以 `= + - @` 开头的单元格会加前导单引号，避免 Excel 把邮件主题当公式执行。
+- `--json` 给机读（`{bucket, count, rows, csv}`）。
+
 ## 明确不做什么
 
 这些边界是设计的一部分，不是暂未实现：
 
 - **不连邮箱**：不实现 IMAP / SMTP / POP3 / OAuth。要连活邮箱请用 `dsh-email`。
 - **不改原文件**：只读；不移动、不删除、不重命名、不回写。
+- **不写任何文件**：包括 `export`——它只把 CSV 打到标准输出，落盘用 `>` 重定向，插件自己一个字节都不写。
 - **不联网**：没有任何网络调用（自检脚本会拦 `node:http/https/net/tls` 等导入）。
 - **不执行邮件内容**：HTML 里的脚本被剥离，远程图片不会自动加载。
 - **不支持**：TNEF（`winmail.dat`）、S/MIME 解密、加密邮件、MS 专有富文本；这些会如实报告，不假装解析成功。
@@ -139,7 +162,7 @@ dsh-mailbox search      ./mail-export --q "invoice"
 ## 开发
 
 ```bash
-npm test          # 94 条测试
+npm test          # 105 条测试
 npm run check     # 五道门禁：结构/语法/命名/加载/红线
 node scripts/make-fixtures.mjs   # 重新生成测试样本（GBK/base64/QP/附件/mbox）
 ```

@@ -53,6 +53,10 @@ dsh-mailbox threads     ./mail-export --top 10            # 30-day fallback wind
 dsh-mailbox threads     ./mail-export --window 0          # headers only
 dsh-mailbox attachments ./mail-export
 dsh-mailbox search      ./mail-export --q "invoice"
+dsh-mailbox export      ./mail-export > todo.csv      # action items only, with BOM
+dsh-mailbox export      ./mail-export --all           # every bucket (adds a bucket column)
+dsh-mailbox export      ./mail-export --bucket red    # one bucket
+dsh-mailbox export      ./mail-export --no-bom        # no BOM (for scripts/APIs)
 ```
 
 Inside DSH, just ask:
